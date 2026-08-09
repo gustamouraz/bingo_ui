@@ -1,0 +1,14 @@
+{
+  "name": "bingo-ui-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "API backend for a 75-ball bingo caller dashboard",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

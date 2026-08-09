@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="pt-BR" class="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bingo Master Pro</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = { theme: { extend: { fontFamily: { display: ['Plus Jakarta Sans'], mono: ['JetBrains Mono'] }, colors: { ink:'#00132c', panel:'#0a203b', panel2:'#172a46', peach:'#ffb693', orange:'#ff6b00', cyan:'#00dbe9' } } } }
+  </script>
+  <style>
+    :root { --switch-off:#d1d5db; --switch-on:#009a93; --switch-thumb:#fff; --switch-focus:rgba(0,154,147,.24) }
+    body { background:#00132c; color:#d5e3ff } .glow { box-shadow:0 0 35px rgba(255,182,147,.38) }
+    .called { background:#b9c7e4; color:#00132c; border-color:#00dbe9; box-shadow:0 0 10px #00dbe980 }
+    .ball { transition:all .18s ease } .drawing { animation:pulse .12s infinite alternate } @keyframes pulse { to { filter:blur(3px); transform:translateY(-5px); opacity:.72 } }
+    .switch-field { display:flex; align-items:center; justify-content:space-between; gap:10px; cursor:pointer }
+    .switch-field input[type="checkbox"] { position:relative; box-sizing:border-box; flex:0 0 44px; width:44px; height:24px; margin:0; padding:0; cursor:pointer; appearance:none; -webkit-appearance:none; border:2px solid transparent; border-radius:999px; outline:none; background:#40515d; transition:background-color .2s ease,box-shadow .2s ease }
+    .switch-field input[type="checkbox"]::after { position:absolute; top:1px; left:1px; width:18px; height:18px; content:""; border-radius:50%; background:var(--switch-thumb); box-shadow:0 2px 5px rgba(11,28,48,.28); transform:translateX(0); transition:transform .2s ease }
+    .switch-field input[type="checkbox"]:checked { background:var(--switch-on) }.switch-field input[type="checkbox"]:checked::after { transform:translateX(20px) }.switch-field input[type="checkbox"]:focus-visible { box-shadow:0 0 0 2px var(--switch-on),0 0 0 4px var(--switch-focus) }.switch-field input[type="checkbox"]:disabled,.switch-field:has(input:disabled) { cursor:not-allowed }.switch-field input[type="checkbox"]:disabled { opacity:.5 }
+  </style>
+</head>
+<body class="min-h-screen font-display">
+  <header class="h-16 px-5 md:px-8 border-b border-slate-700 flex items-center justify-between bg-ink sticky top-0 z-20">
+    <h1 class="text-peach font-extrabold tracking-wide">BINGO MASTER PRO</h1>
+    <span id="connection" class="font-mono text-xs text-cyan">CONECTANDO...</span>
+  </header>
+  <div class="md:grid md:grid-cols-[280px_1fr] min-h-[calc(100vh-64px)]">
+    <aside class="bg-panel p-6 border-r border-slate-700">
+      <p class="font-mono text-xs text-slate-400 uppercase">Sessão ativa</p>
+      <h2 id="session-name" class="text-xl text-peach font-bold mt-1">Carregando...</h2>
+      <p class="text-sm text-slate-400 mt-1">Bingo padrão 75 bolas</p>
+      <button id="new-session" class="w-full mt-6 bg-peach hover:bg-orange text-ink font-mono font-bold text-sm py-3 rounded-lg transition">NOVA SESSÃO</button>
+      <div class="grid grid-cols-3 gap-2 mt-7 text-center">
+        <div class="bg-panel2 rounded-lg p-3"><span class="block text-xs text-slate-400">CHAMADOS</span><strong id="total-called" class="text-peach text-xl">0</strong></div>
+        <div class="bg-panel2 rounded-lg p-3"><span class="block text-xs text-slate-400">FALTAM</span><strong id="remaining" class="text-lg">75</strong></div>
+        <div class="bg-panel2 rounded-lg p-3"><span class="block text-xs text-slate-400">ÚLTIMO</span><strong id="last-called" class="text-cyan text-sm">--</strong></div>
+      </div>
+      <button id="reset" class="mt-6 text-sm text-slate-400 hover:text-white underline">Reiniciar sessão atual</button>
+      <label class="switch-field mt-5 rounded-lg bg-panel2 p-3 font-mono text-xs text-slate-300">
+        <span>Encerrar sessão</span><input id="close-session" type="checkbox" aria-label="Encerrar sessão">
+      </label>
+      <div class="mt-8 pt-5 border-t border-slate-700">
+        <p class="font-mono text-xs text-slate-400 uppercase mb-3">Histórico de sessões</p>
+        <div id="session-history" class="space-y-2 max-h-56 overflow-y-auto">
+          <span class="text-sm text-slate-500">Nenhuma sessão encerrada.</span>
+        </div>
+        <button id="clear-history" class="mt-3 text-xs text-slate-400 hover:text-orange underline">Limpar histórico</button>
+      </div>
+    </aside>
+    <main class="p-5 md:p-8 max-w-7xl w-full mx-auto">
+      <section class="grid xl:grid-cols-[1fr_330px] gap-6">
+        <div id="draw-card" class="min-h-[330px] rounded-3xl bg-peach border-4 border-orange glow flex flex-col items-center justify-center text-ink">
+          <span class="font-mono text-xs uppercase tracking-[.25em]">Número atual</span>
+          <div id="current-number" class="text-7xl sm:text-9xl font-extrabold tracking-tighter mt-4">--</div>
+          <span id="game-status" class="mt-7 rounded-full bg-black/20 px-4 py-2 font-mono text-xs">JOGO EM ANDAMENTO</span>
+        </div>
+        <div class="bg-panel rounded-2xl border border-slate-700 p-5 flex flex-col justify-center">
+          <button id="draw" class="h-32 rounded-xl bg-cyan text-ink hover:bg-white font-bold text-xl tracking-widest transition disabled:opacity-40">SORTEAR<br><span class="font-mono text-xs">NÚMERO</span></button>
+          <label class="switch-field mt-6 bg-panel2 p-4 rounded-lg font-mono text-sm"><span>Auto-sorteio</span><input id="auto" type="checkbox" aria-label="Auto-sorteio"></label>
+          <label class="mt-4 text-xs text-slate-400 font-mono">Velocidade: <span id="speed-value">5</span>s</label>
+          <input id="speed" type="range" min="3" max="15" value="5" class="w-full accent-cyan">
+        </div>
+      </section>
+      <section class="bg-panel rounded-2xl border border-slate-700 p-5 md:p-6 mt-6">
+        <h3 class="font-bold text-lg mb-5">Master Board</h3>
+        <div class="grid grid-cols-5 gap-2 text-center mb-2 text-peach font-bold text-xl"><span>B</span><span>I</span><span>N</span><span>G</span><span>O</span></div>
+        <div id="board" class="grid grid-cols-5 gap-2"></div>
+      </section>
+      <section class="bg-panel rounded-2xl border border-slate-700 p-5 md:p-6 mt-6">
+        <h3 class="font-bold text-lg mb-4">Histórico de Números</h3>
+        <div id="history" class="flex flex-wrap gap-2 max-h-36 overflow-y-auto"></div>
+      </section>
+    </main>
+  </div>
+  <div id="winner-modal" class="hidden fixed inset-0 z-50 bg-black/70 p-5 items-center justify-center">
+    <form id="winner-form" class="w-full max-w-md rounded-2xl border border-slate-600 bg-panel p-6 shadow-2xl">
+      <h2 class="text-xl text-peach font-bold">Encerrar sessão</h2>
+      <p class="mt-2 text-sm text-slate-400">Informe os ganhadores, um nome por linha.</p>
+      <textarea id="winners" required rows="5" maxlength="1600" class="mt-4 w-full rounded-lg border border-slate-600 bg-ink p-3 text-white focus:border-cyan focus:ring-cyan" placeholder="Ex.:&#10;Maria Silva&#10;João Santos"></textarea>
+      <div class="mt-5 flex justify-end gap-3"><button id="cancel-close" type="button" class="rounded-lg px-4 py-2 text-sm text-slate-300 hover:bg-panel2">Cancelar</button><button class="rounded-lg bg-orange px-4 py-2 text-sm font-bold text-white hover:bg-peach hover:text-ink">Confirmar encerramento</button></div>
+    </form>
+  </div>
+  <script>
+    const $ = (selector) => document.querySelector(selector);
+    let session, sessions = [], timer, drawing = false;
+    const label = (n) => `${n <= 15 ? 'B' : n <= 30 ? 'I' : n <= 45 ? 'N' : n <= 60 ? 'G' : 'O'}-${String(n).padStart(2, '0')}`;
+    async function request(route, options = {}) {
+      const response = await fetch(`/api${route}`, { headers:{'Content-Type':'application/json'}, ...options });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || 'Erro ao comunicar com o servidor.');
+      return payload;
+    }
+    function render() {
+      $('#session-name').textContent = session.name;
+      $('#total-called').textContent = session.totalCalled;
+      $('#remaining').textContent = session.totalRemaining;
+      $('#last-called').textContent = session.lastCalled || '--';
+      $('#current-number').textContent = session.lastCalled || '--';
+      $('#auto').checked = session.autoDraw;
+      $('#speed').value = session.drawIntervalSeconds;
+      $('#speed-value').textContent = session.drawIntervalSeconds;
+      const ended = session.status !== 'in_progress';
+      $('#draw').disabled = ended;
+      $('#close-session').checked = ended;
+      $('#close-session').disabled = ended;
+      $('#game-status').textContent = session.status === 'completed' ? 'TODAS AS BOLAS FORAM SORTEADAS' : ended ? 'SESSÃO ENCERRADA' : 'JOGO EM ANDAMENTO';
+      const called = new Set(session.calledNumbers);
+      $('#board').innerHTML = Array.from({length:5}, (_, col) => `<div class="grid gap-1">${Array.from({length:15}, (_, row) => { const n = col * 15 + row + 1; return `<div class="ball rounded border border-slate-600 text-center py-2 font-mono text-sm ${called.has(n) ? 'called font-bold' : 'bg-panel2 text-slate-500'}">${n}</div>` }).join('')}</div>`).join('');
+      $('#history').innerHTML = session.calledNumbers.map(n => `<span class="font-mono text-xs rounded-full px-3 py-2 border ${n === session.calledNumbers.at(-1) ? 'border-cyan bg-cyan/10 text-cyan' : 'border-slate-600 bg-panel2'}">${label(n)}</span>`).join('') || '<span class="text-slate-500 text-sm">Nenhum número chamado.</span>';
+      const archived = sessions.filter(item => item.status !== 'in_progress');
+      $('#session-history').innerHTML = archived.length ? archived.map(item => `<button data-session-id="${item.id}" class="archive-session text-left w-full rounded-lg bg-panel2 hover:bg-slate-700 p-3 transition ${item.id === session.id ? 'ring-1 ring-cyan' : ''}"><span class="block text-sm text-peach font-bold truncate">${item.name}</span><span class="font-mono text-[10px] text-slate-400">${item.totalCalled} NÚMEROS · ${(item.winners || []).join(', ') || 'sem ganhador'} </span></button>`).join('') : '<span class="text-sm text-slate-500">Nenhuma sessão encerrada.</span>';
+      document.querySelectorAll('.archive-session').forEach(button => button.onclick = async () => { const result = await request(`/sessions/${button.dataset.sessionId}`); session = result.session; render(); });
+      clearInterval(timer);
+      if (session.autoDraw && !ended) timer = setInterval(draw, session.drawIntervalSeconds * 1000);
+    }
+    async function draw() {
+      if (drawing || session.status !== 'in_progress') return;
+      drawing = true; $('#draw').disabled = true; $('#current-number').classList.add('drawing');
+      const current = $('#current-number');
+      const flicker = setInterval(() => current.textContent = label(Math.ceil(Math.random() * 75)), 55);
+      try { const result = await request(`/sessions/${session.id}/draw`, {method:'POST'}); await new Promise(r => setTimeout(r, 700)); session = result.session; sessions = sessions.map(item => item.id === session.id ? session : item); render(); }
+      catch (error) { alert(error.message); }
+      finally { clearInterval(flicker); $('#current-number').classList.remove('drawing'); drawing = false; if (session.status === 'in_progress') $('#draw').disabled = false; }
+    }
+    async function saveSettings() {
+      try { const result = await request(`/sessions/${session.id}/settings`, { method:'PATCH', body:JSON.stringify({autoDraw:$('#auto').checked, drawIntervalSeconds:Number($('#speed').value)}) }); session = result.session; render(); } catch (error) { alert(error.message); }
+    }
+    $('#draw').onclick = draw; $('#auto').onchange = saveSettings; $('#speed').onchange = saveSettings;
+    $('#close-session').onchange = (event) => { if (event.target.checked) { $('#winner-modal').classList.remove('hidden'); $('#winner-modal').classList.add('flex'); $('#winners').focus(); } };
+    $('#cancel-close').onclick = () => { $('#winner-modal').classList.add('hidden'); $('#winner-modal').classList.remove('flex'); $('#close-session').checked = false; };
+    $('#winner-form').onsubmit = async (event) => { event.preventDefault(); const winners = $('#winners').value.split('\n').map(value => value.trim()).filter(Boolean); try { const result = await request(`/sessions/${session.id}/close`, {method:'POST', body:JSON.stringify({winners})}); session = result.session; sessions = sessions.map(item => item.id === session.id ? session : item); $('#winner-modal').classList.add('hidden'); $('#winner-modal').classList.remove('flex'); $('#winners').value = ''; render(); } catch (error) { alert(error.message); } };
+    $('#clear-history').onclick = async () => { const archived = sessions.filter(item => item.status !== 'in_progress'); if (!archived.length) return; if (!confirm(`Excluir permanentemente ${archived.length} sessão(ões) do histórico?`)) return; try { await request('/sessions/history', {method:'DELETE'}); sessions = sessions.filter(item => item.status === 'in_progress'); if (!sessions.length) { const result = await request('/sessions', {method:'POST', body:JSON.stringify({name:`Sessão #${Math.floor(100 + Math.random() * 900)}`, autoDraw:false, drawIntervalSeconds:5})}); session = result.session; sessions.push(session); } else { session = sessions.at(-1); } render(); } catch (error) { alert(error.message); } };
+    $('#new-session').onclick = async () => { const result = await request('/sessions', {method:'POST', body:JSON.stringify({name:`Sessão #${Math.floor(100 + Math.random() * 900)}`, autoDraw:false, drawIntervalSeconds:5})}); session = result.session; sessions.push(session); render(); };
+    $('#reset').onclick = async () => { if (!confirm('Reiniciar todos os números chamados desta sessão?')) return; const result = await request(`/sessions/${session.id}/reset`, {method:'POST'}); session = result.session; sessions = sessions.map(item => item.id === session.id ? session : item); render(); };
+    (async () => { try { const result = await request('/sessions'); sessions = result.sessions; session = sessions.filter(item => item.status === 'in_progress').at(-1) || sessions.at(-1); render(); $('#connection').textContent = '● ONLINE'; } catch (error) { $('#connection').textContent = '● OFFLINE'; alert(error.message); } })();
+  </script>
+</body>
+</html>
